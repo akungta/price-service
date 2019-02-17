@@ -3,7 +3,6 @@ package com.akashrungta.priceservice.models;
 import io.dropwizard.jackson.JsonSnakeCase;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Value;
 
 import java.math.BigDecimal;
 
@@ -12,7 +11,7 @@ import java.math.BigDecimal;
 @JsonSnakeCase
 public class LatestPrice {
 
-    Integer instrumentId;
+    String instrumentId;
 
     BigDecimal price;
 

@@ -6,7 +6,6 @@ import io.dropwizard.jackson.JsonSnakeCase;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Value;
 
 import java.math.BigDecimal;
 
@@ -15,7 +14,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @JsonSnakeCase
 @JsonTypeName("bonds")
-public class Bonds extends Payload {
+public class Bonds implements Payload {
 
     BondDetails bondDetails;
 

@@ -1,6 +1,5 @@
 package com.akashrungta.priceservice.resources;
 
-import com.akashrungta.priceservice.core.IncompleteRecordsManager;
 import com.akashrungta.priceservice.core.RecordsManager;
 import com.akashrungta.priceservice.models.Upload;
 import com.akashrungta.priceservice.models.enums.Indicator;
@@ -12,7 +11,6 @@ import javax.validation.constraints.NotNull;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -24,12 +22,9 @@ public class ProviderResource {
 
     private final ConcurrentMap<String, Indicator> providerIndicator = new ConcurrentHashMap<>();
 
-    private final IncompleteRecordsManager incompleteRecordsManager;
-
     private final RecordsManager recordsManager;
 
-    public ProviderResource(IncompleteRecordsManager incompleteRecordsManager, RecordsManager recordsManager) {
-        this.incompleteRecordsManager = incompleteRecordsManager;
+    public ProviderResource(RecordsManager recordsManager) {
         this.recordsManager = recordsManager;
     }
 
@@ -42,9 +37,9 @@ public class ProviderResource {
                 if(newIndicator == Indicator.START){
                     throw new WebApplicationException("Already Started for " + provider, Response.Status.NOT_ACCEPTABLE);
                 } else if(newIndicator == Indicator.COMPLETE){
-                    recordsManager.insertRecords(incompleteRecordsManager.cleanup(provider));
+                    recordsManager.commit(provider);
                 } else if(newIndicator == Indicator.CANCEL){
-                    incompleteRecordsManager.cleanup(provider);
+                    recordsManager.rollback(provider);
                 }
                 return newIndicator;
             } else {
@@ -63,7 +58,7 @@ public class ProviderResource {
     @Path("/upload")
     public Response upload(@PathParam("provider") @Valid String provider, @NotNull @Valid Upload upload) {
         if(providerIndicator.get(provider) == Indicator.START){
-            incompleteRecordsManager.addAll(provider, upload.getRecords());
+            recordsManager.prepare(provider, upload.getRecords());
             return Response.ok().build();
         } else {
             throw new WebApplicationException("Provider has not indicated batch START", Response.Status.NOT_ACCEPTABLE);

@@ -1,6 +1,5 @@
 package com.akashrungta.priceservice;
 
-import com.akashrungta.priceservice.core.IncompleteRecordsManager;
 import com.akashrungta.priceservice.core.RecordsManager;
 import com.akashrungta.priceservice.resources.ConsumerResource;
 import com.akashrungta.priceservice.resources.ProviderResource;
@@ -35,7 +34,7 @@ public class PriceServiceApplication extends Application<PriceServiceConfigurati
     @Override
     public void run(final PriceServiceConfiguration configuration,
                     final Environment environment) {
-        final ProviderResource providerResource = new ProviderResource(IncompleteRecordsManager.getInstance(), RecordsManager.getInstance());
+        final ProviderResource providerResource = new ProviderResource(RecordsManager.getInstance());
         final ConsumerResource consumerResource = new ConsumerResource(RecordsManager.getInstance());
         environment.jersey().register(providerResource);
         environment.jersey().register(consumerResource);
