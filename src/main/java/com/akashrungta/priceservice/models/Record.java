@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 public class Record {
 
     String instrumentId;
+
     LocalDateTime asOf;
 
     @JsonTypeInfo(

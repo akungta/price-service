@@ -26,10 +26,39 @@ public class RecordsManager {
         return Holder.INSTANCE;
     }
 
-    private final ConcurrentMap<String, Pair<LocalDateTime, BigDecimal>> instrumentIdToPrices = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Pair<LocalDateTime, BigDecimal>> committedPrices = new ConcurrentHashMap<>();
 
     private final ConcurrentMap<String, Map<String, Pair<LocalDateTime, BigDecimal>>> nonCommittedPrices = new ConcurrentHashMap<>();
 
+    /**
+     * This method takes list of records from the /upload operation, and returns a temporary map
+     */
+    private Map<String, Pair<LocalDateTime, BigDecimal>> getMap(List<Record> records) {
+        Map<String, Pair<LocalDateTime, BigDecimal>> retval = new HashMap<>();
+        records.forEach(r -> {
+            retval.merge(r.getInstrumentId(), Pair.of(r.getAsOf(),r.getPayload().getPrice()), getPairBiFunction());
+        });
+        return retval;
+    }
+
+    /**
+     * This method returns a bifunction which takes two Pair of <asOf, price>, and returns the one which has
+     * latest asOf datetime
+     */
+    private BiFunction<Pair<LocalDateTime, BigDecimal>, Pair<LocalDateTime, BigDecimal>, Pair<LocalDateTime, BigDecimal>> getPairBiFunction() {
+        return (p1, p2) -> {
+            if (p2.getLeft().isAfter(p1.getLeft())) {
+                return p2;
+            } else {
+                return p1;
+            }
+        };
+    }
+
+    /**
+     * Takes a list of records, and merge the record into existing uncommitted map. Merge happens for each
+     * provider and as well as instrument. Retaining the latest asOf price.
+     */
     public void prepare(String provider, List<Record> records){
         nonCommittedPrices.merge(provider, getMap(records), (m1,m2) -> {
             m2.entrySet().stream().forEach(
@@ -41,35 +70,23 @@ public class RecordsManager {
         });
     }
 
-    private Map<String, Pair<LocalDateTime, BigDecimal>> getMap(List<Record> records) {
-        Map<String, Pair<LocalDateTime, BigDecimal>> retval = new HashMap<>();
-        records.forEach(r -> {
-            retval.merge(r.getInstrumentId(), Pair.of(r.getAsOf(),r.getPayload().getPrice()), getPairBiFunction());
-        });
-        return retval;
-    }
-
-    private BiFunction<Pair<LocalDateTime, BigDecimal>, Pair<LocalDateTime, BigDecimal>, Pair<LocalDateTime, BigDecimal>> getPairBiFunction() {
-        return (p1, p2) -> {
-            if (p2.getLeft().isAfter(p1.getLeft())) {
-                return p2;
-            } else {
-                return p1;
-            }
-        };
-    }
-
+    /**
+     * Move the price data to commit map, which means batch is completed, and data can be fetched
+     */
     public void commit(String provider) {
         Map<String, Pair<LocalDateTime, BigDecimal>> commitPrices = nonCommittedPrices.remove(provider);
-        instrumentIdToPrices.putAll(commitPrices);
+        committedPrices.putAll(commitPrices);
     }
 
+    /**
+     * Discard the nonCommitted data for provider, because provider indicated to cancel the batch
+     */
     public void rollback(String provider) {
         nonCommittedPrices.remove(provider);
     }
 
     public Optional<BigDecimal> getPrice(String instrumentId){
-        return Optional.ofNullable(instrumentIdToPrices.getOrDefault(instrumentId, Pair.of(null, null)).getRight());
+        return Optional.ofNullable(committedPrices.getOrDefault(instrumentId, Pair.of(null, null)).getRight());
     }
 
 }
