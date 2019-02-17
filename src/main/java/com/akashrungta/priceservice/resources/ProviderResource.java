@@ -1,5 +1,7 @@
 package com.akashrungta.priceservice.resources;
 
+import com.akashrungta.priceservice.core.IncompleteRecordsManager;
+import com.akashrungta.priceservice.core.RecordsManager;
 import com.akashrungta.priceservice.models.Upload;
 import com.akashrungta.priceservice.models.enums.Indicator;
 import com.codahale.metrics.annotation.Timed;
@@ -18,7 +20,16 @@ import java.util.concurrent.ConcurrentMap;
 @Consumes(MediaType.APPLICATION_JSON)
 public class ProviderResource {
 
-    private ConcurrentMap<String, Indicator> providerIndicator = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Indicator> providerIndicator = new ConcurrentHashMap<>();
+
+    private final IncompleteRecordsManager incompleteRecordsManager;
+
+    private final RecordsManager recordsManager;
+
+    public ProviderResource(IncompleteRecordsManager incompleteRecordsManager, RecordsManager recordsManager) {
+        this.incompleteRecordsManager = incompleteRecordsManager;
+        this.recordsManager = recordsManager;
+    }
 
     @POST
     @Timed
@@ -30,9 +41,9 @@ public class ProviderResource {
                     if(newIndicator == Indicator.START){
                         throw new WebApplicationException("Already Started for " + provider, Response.Status.NOT_ACCEPTABLE);
                     } else if(newIndicator == Indicator.COMPLETE){
-                        //complete copy
+                        recordsManager.insertRecords(incompleteRecordsManager.cleanup(provider));
                     } else if(newIndicator == Indicator.CANCEL){
-                        //cleanup
+                        incompleteRecordsManager.cleanup(provider);
                     }
                     return newIndicator;
                 } else {
@@ -53,7 +64,7 @@ public class ProviderResource {
     @Path("/upload")
     public Response upload(@PathParam("provider") @Valid String provider, @NotNull @Valid Upload upload) {
         if(providerIndicator.get(provider) == Indicator.START){
-
+            incompleteRecordsManager.addAll(provider, upload.getRecords());
         } else {
             throw new WebApplicationException("Provider has not indicated batch START", Response.Status.NOT_ACCEPTABLE);
         }

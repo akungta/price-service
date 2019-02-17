@@ -1,5 +1,7 @@
 package com.akashrungta.priceservice;
 
+import com.akashrungta.priceservice.core.IncompleteRecordsManager;
+import com.akashrungta.priceservice.core.RecordsManager;
 import com.akashrungta.priceservice.resources.ProviderResource;
 import com.codahale.metrics.health.HealthCheck;
 import io.dropwizard.Application;
@@ -25,7 +27,7 @@ public class PriceServiceApplication extends Application<PriceServiceConfigurati
     @Override
     public void run(final PriceServiceConfiguration configuration,
                     final Environment environment) {
-        final ProviderResource providerResource = new ProviderResource();
+        final ProviderResource providerResource = new ProviderResource(IncompleteRecordsManager.getInstance(), RecordsManager.getInstance());
         environment.jersey().register(providerResource);
         environment.healthChecks().register("healthcheck", new HealthCheck() {
             @Override

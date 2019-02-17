@@ -1,10 +1,13 @@
 package com.akashrungta.priceservice.models;
 
-import lombok.Data;
+import com.akashrungta.priceservice.core.RecordDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import lombok.Value;
 
 import java.time.LocalDateTime;
 
-@Data
+@Value
+@JsonDeserialize(using = RecordDeserializer.class)
 public class Record {
 
     int instrumentId;
