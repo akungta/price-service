@@ -2,3 +2,5 @@ logging:
   level: INFO
   loggers:
     com.akashrungta: DEBUG
+swagger:
+  resourcePackage: "com.akashrungta.priceservice.resources"

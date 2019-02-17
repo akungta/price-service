@@ -3,18 +3,17 @@ package com.akashrungta.priceservice.models;
 import io.dropwizard.jackson.JsonSnakeCase;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Value;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 @JsonSnakeCase
-public class Record {
+public class LatestPrice {
 
-    int instrumentId;
-    LocalDateTime asOf;
-    Payload payload;
+    Integer instrumentId;
+
+    BigDecimal price;
 
 }
