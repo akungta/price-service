@@ -20,6 +20,9 @@ import java.util.concurrent.ConcurrentMap;
 @Consumes(MediaType.APPLICATION_JSON)
 public class ProviderResource {
 
+    /**
+     * Provider Indicator stores current state of the given indicator
+     */
     private final ConcurrentMap<String, Indicator> providerIndicator = new ConcurrentHashMap<>();
 
     private final RecordsManager recordsManager;
@@ -33,6 +36,10 @@ public class ProviderResource {
     @Path("/{indicator}")
     public Response update(@PathParam("provider") @Valid String provider, @Valid @NotNull @PathParam("indicator") Indicator indicator) {
         providerIndicator.merge(provider, indicator, (oldIndicator,newIndicator) -> {
+            /**
+             * Below is the state change check, allowed changes are START -> COMPLETE -> START
+             * or START -> CANCEL -> START. All other changes are suppose to throw Exceptions
+             */
             if(oldIndicator == Indicator.START){
                 if(newIndicator == Indicator.START){
                     throw new WebApplicationException("Already Started for " + provider, Response.Status.NOT_ACCEPTABLE);
@@ -57,6 +64,7 @@ public class ProviderResource {
     @Timed
     @Path("/upload")
     public Response upload(@PathParam("provider") @Valid String provider, @NotNull @Valid Upload upload) {
+        // Only allowed to upload if START indication is provided as per requirements
         if(providerIndicator.get(provider) == Indicator.START){
             recordsManager.prepare(provider, upload.getRecords());
             return Response.ok().build();

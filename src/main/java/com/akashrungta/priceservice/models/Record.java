@@ -21,6 +21,11 @@ public class Record {
 
     LocalDateTime asOf;
 
+    /**
+     * Payload has been configured to use Jackson Polymorphism to deserialize the payload json data into
+     * object of specific subclass, based on the value indicated by property "instrumentId"
+     * Example: if instrument_id="stocks", Payload will object of Stocks.class
+     */
     @JsonTypeInfo(
             use = JsonTypeInfo.Id.NAME,
             include = JsonTypeInfo.As.EXTERNAL_PROPERTY,
