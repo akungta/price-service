@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Api
-@Path("/provider/{provider}")
+@Path("/provider/{session_id}")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class ProviderResource {
@@ -34,26 +34,26 @@ public class ProviderResource {
     @POST
     @Timed
     @Path("/{indicator}")
-    public Response update(@PathParam("provider") @Valid String provider, @Valid @NotNull @PathParam("indicator") Indicator indicator) {
-        providerIndicator.merge(provider, indicator, (oldIndicator,newIndicator) -> {
+    public Response update(@PathParam("session_id") @Valid String session_id, @Valid @NotNull @PathParam("indicator") Indicator indicator) {
+        providerIndicator.merge(session_id, indicator, (oldIndicator,newIndicator) -> {
             /**
              * Below is the state change check, allowed changes are START -> COMPLETE -> START
              * or START -> CANCEL -> START. All other changes are suppose to throw Exceptions
              */
             if(oldIndicator == Indicator.START){
                 if(newIndicator == Indicator.START){
-                    throw new WebApplicationException("Already Started for " + provider, Response.Status.NOT_ACCEPTABLE);
+                    throw new WebApplicationException("Already Started for " + session_id, Response.Status.NOT_ACCEPTABLE);
                 } else if(newIndicator == Indicator.COMPLETE){
-                    recordsManager.commit(provider);
+                    recordsManager.commit(session_id);
                 } else if(newIndicator == Indicator.CANCEL){
-                    recordsManager.rollback(provider);
+                    recordsManager.rollback(session_id);
                 }
                 return newIndicator;
             } else {
                 if(newIndicator == Indicator.START){
                     return newIndicator;
                 } else {
-                    throw new WebApplicationException("Can't do anything for " + provider, Response.Status.NOT_ACCEPTABLE);
+                    throw new WebApplicationException("Can't do anything for " + session_id, Response.Status.NOT_ACCEPTABLE);
                 }
             }
         });
@@ -63,10 +63,10 @@ public class ProviderResource {
     @POST
     @Timed
     @Path("/upload")
-    public Response upload(@PathParam("provider") @Valid String provider, @NotNull @Valid Upload upload) {
+    public Response upload(@PathParam("session_id") @Valid String session_id, @NotNull @Valid Upload upload) {
         // Only allowed to upload if START indication is provided as per requirements
-        if(providerIndicator.get(provider) == Indicator.START){
-            recordsManager.prepare(provider, upload.getRecords());
+        if(providerIndicator.get(session_id) == Indicator.START){
+            recordsManager.prepare(session_id, upload.getRecords());
             return Response.ok().build();
         } else {
             throw new WebApplicationException("Provider has not indicated batch START", Response.Status.NOT_ACCEPTABLE);

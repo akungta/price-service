@@ -57,10 +57,10 @@ public class RecordsManager {
 
     /**
      * Takes a list of records, and merge the record into existing uncommitted map. Merge happens for each
-     * provider and as well as instrument. Retaining the latest asOf price.
+     * session_id and as well as instrument. Retaining the latest asOf price.
      */
-    public void prepare(String provider, List<Record> records){
-        nonCommittedPrices.merge(provider, getMap(records), (m1,m2) -> {
+    public void prepare(String session_id, List<Record> records){
+        nonCommittedPrices.merge(session_id, getMap(records), (m1,m2) -> {
             m2.entrySet().stream().forEach(
                     entry -> {
                         m1.merge(entry.getKey(), entry.getValue(), getPairBiFunction());
@@ -73,16 +73,16 @@ public class RecordsManager {
     /**
      * Move the price data to commit map, which means batch is completed, and data can be fetched
      */
-    public void commit(String provider) {
-        Map<String, Pair<LocalDateTime, BigDecimal>> commitPrices = nonCommittedPrices.remove(provider);
+    public void commit(String session_id) {
+        Map<String, Pair<LocalDateTime, BigDecimal>> commitPrices = nonCommittedPrices.remove(session_id);
         committedPrices.putAll(commitPrices);
     }
 
     /**
-     * Discard the nonCommitted data for provider, because provider indicated to cancel the batch
+     * Discard the nonCommitted data for session_id, because session_id indicated to cancel the batch
      */
-    public void rollback(String provider) {
-        nonCommittedPrices.remove(provider);
+    public void rollback(String session_id) {
+        nonCommittedPrices.remove(session_id);
     }
 
     public Optional<BigDecimal> getPrice(String instrumentId){
