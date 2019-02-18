@@ -15,7 +15,7 @@ To see your applications health enter url `http://localhost:8081/healthcheck`
 Usages
 ---
 
-* Indicate the START of the batch for the provider "akash"
+* Indicate the START of the batch for the provider "akash". (This can also be considered as unique session identifier)
 ```
 curl -X POST "http://localhost:8080/provider/akash/START" -H  "accept: application/json"
 ```
