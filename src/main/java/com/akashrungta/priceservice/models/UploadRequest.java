@@ -7,7 +7,7 @@ import java.util.List;
 
 @Data
 @NoArgsConstructor
-public class Upload {
+public class UploadRequest {
 
     List<Record> records;
 

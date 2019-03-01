@@ -1,6 +1,6 @@
 package com.akashrungta.priceservice;
 
-import com.akashrungta.priceservice.core.RecordsManager;
+import com.akashrungta.priceservice.core.JobExecutionService;
 import com.akashrungta.priceservice.resources.InstrumentResource;
 import com.akashrungta.priceservice.resources.SessionResource;
 import com.codahale.metrics.health.HealthCheck;
@@ -34,11 +34,9 @@ public class PriceServiceApplication extends Application<PriceServiceConfigurati
     @Override
     public void run(final PriceServiceConfiguration configuration,
                     final Environment environment) {
-
-        final InstrumentResource instrumentResource = new InstrumentResource(RecordsManager.getInstance());
-        final SessionResource sessionResource = new SessionResource(RecordsManager.getInstance());
-        environment.jersey().register(instrumentResource);
-        environment.jersey().register(sessionResource);
+        environment.lifecycle().manage(new JobExecutionService());
+        environment.jersey().register(new InstrumentResource());
+        environment.jersey().register(new SessionResource());
         environment.healthChecks().register("healthcheck", new HealthCheck() {
             @Override
             protected Result check() throws Exception {

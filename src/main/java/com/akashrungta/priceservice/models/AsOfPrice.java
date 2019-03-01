@@ -1,4 +1,4 @@
-package com.akashrungta.priceservice;
+package com.akashrungta.priceservice.models;
 
 import lombok.Value;
 

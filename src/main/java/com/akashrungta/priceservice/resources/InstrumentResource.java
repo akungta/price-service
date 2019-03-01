@@ -18,11 +18,7 @@ import java.util.Optional;
 @Consumes(MediaType.APPLICATION_JSON)
 public class InstrumentResource {
 
-    private final RecordsManager recordsManager;
-
-    public InstrumentResource(RecordsManager recordsManager) {
-        this.recordsManager = recordsManager;
-    }
+    private final RecordsManager recordsManager = RecordsManager.getInstance();
 
     @POST
     @Timed
@@ -32,7 +28,7 @@ public class InstrumentResource {
         if(price.isPresent()){
             return Response.ok().entity(new LatestPrice(instrumentId, price.get())).build();
         }
-        return Response.status(Response.Status.BAD_REQUEST).entity("No price found.").build();
+        return Response.status(Response.Status.BAD_REQUEST).type(MediaType.TEXT_PLAIN_TYPE).entity("No price found.").build();
     }
 
 
