@@ -1,22 +1,23 @@
 package com.akashrungta.priceservice.core;
 
 
+import com.akashrungta.priceservice.AsOfPrice;
+import com.akashrungta.priceservice.SessionRecord;
 import com.akashrungta.priceservice.models.Record;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.*;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 public class RecordsManager {
 
-    private RecordsManager(){ }
+    private RecordsManager() {
+    }
 
     private static class Holder {
         private static final RecordsManager INSTANCE = new RecordsManager();
@@ -26,67 +27,81 @@ public class RecordsManager {
         return Holder.INSTANCE;
     }
 
-    private final ConcurrentMap<String, Pair<LocalDateTime, BigDecimal>> committedPrices = new ConcurrentHashMap<>();
+    public final BlockingQueue<SessionRecord> uploadQueue = new LinkedBlockingDeque<>(1000);
 
-    private final ConcurrentMap<String, Map<String, Pair<LocalDateTime, BigDecimal>>> nonCommittedPrices = new ConcurrentHashMap<>();
+    public final ExecutorService executor = Executors.newFixedThreadPool(4);
 
-    /**
-     * This method takes list of records from the /upload operation, and returns a temporary map
-     */
-    private Map<String, Pair<LocalDateTime, BigDecimal>> getMap(List<Record> records) {
-        Map<String, Pair<LocalDateTime, BigDecimal>> retval = new HashMap<>();
-        records.forEach(r -> {
-            retval.merge(r.getInstrumentId(), Pair.of(r.getAsOf(),r.getPayload().getPrice()), getPairBiFunction());
-        });
-        return retval;
-    }
+    private final ConcurrentMap<String, AsOfPrice> latestPrices = new ConcurrentHashMap<>();
+
+    private final Map<String, ConcurrentMap<String, AsOfPrice>> sessionLatestPrices = new HashMap<>();
 
     /**
-     * This method returns a bifunction which takes two Pair of <asOf, price>, and returns the one which has
+     * This method returns a bifunction which takes two asOfPrice, and returns the one which has
      * latest asOf datetime
      */
-    private BiFunction<Pair<LocalDateTime, BigDecimal>, Pair<LocalDateTime, BigDecimal>, Pair<LocalDateTime, BigDecimal>> getPairBiFunction() {
-        return (p1, p2) -> {
-            if (p2.getLeft().isAfter(p1.getLeft())) {
-                return p2;
+    private BiFunction<AsOfPrice, AsOfPrice, AsOfPrice> latestAsOfPriceFunction() {
+        return (oldValue, newValue) -> {
+            if (newValue.getAsOf().isAfter(oldValue.getAsOf())) {
+                return newValue;
             } else {
-                return p1;
+                return oldValue;
             }
         };
     }
 
-    /**
-     * Takes a list of records, and merge the record into existing uncommitted map. Merge happens for each
-     * session_id and as well as instrument. Retaining the latest asOf price.
-     */
-    public void prepare(String session_id, List<Record> records){
-        nonCommittedPrices.merge(session_id, getMap(records), (m1,m2) -> {
-            m2.entrySet().stream().forEach(
-                    entry -> {
-                        m1.merge(entry.getKey(), entry.getValue(), getPairBiFunction());
-                    }
-            );
-            return m1;
-        });
+    private BiConsumer<String, AsOfPrice> mergeInto(ConcurrentMap<String, AsOfPrice> result){
+        return (instrumentId, asOfPrice) -> result.merge(instrumentId, asOfPrice, latestAsOfPriceFunction());
+    }
+
+    public void prepare(String sessionId) {
+        sessionLatestPrices.put(sessionId, new ConcurrentHashMap<>());
     }
 
     /**
-     * Move the price data to commit map, which means batch is completed, and data can be fetched
+     * Takes a list of records, and mergeInto the record into existing uncommitted map. Merge happens for each
+     * session_id and as well as instrument. Retaining the latest asOf price.
      */
-    public void commit(String session_id) {
-        Map<String, Pair<LocalDateTime, BigDecimal>> commitPrices = nonCommittedPrices.remove(session_id);
-        committedPrices.putAll(commitPrices);
+    public void upload(String sessionId, List<Record> records) {
+        records.forEach(record -> uploadQueue.offer(new SessionRecord(
+                sessionId,
+                record.getInstrumentId(),
+                new AsOfPrice(record.getAsOf(), record.getPayload().getPrice())))
+        );
+    }
+
+    private void consumeRecords(SessionRecord record){
+        sessionLatestPrices.merge(record.getSessionId(), getAsOfPricesOf(record),
+                (existingMap, newMap) -> {
+                    newMap.forEach(mergeInto(existingMap));
+                    return existingMap;
+                });
+    }
+
+    /**
+     * This method takes list of records from the /upload operation, and returns a temporary map
+     */
+    private ConcurrentMap<String, AsOfPrice> getAsOfPricesOf(SessionRecord record) {
+        ConcurrentMap<String, AsOfPrice> retval = new ConcurrentHashMap<>();
+        retval.put(record.getInstrumentId(), record.getAsOfPrice());
+        return retval;
+    }
+
+    /**
+     * Move the price data to complete map, which means batch is completed, and data can be fetched
+     */
+    public void complete(String sessionId) {
+        sessionLatestPrices.remove(sessionId).forEach(mergeInto(latestPrices));
     }
 
     /**
      * Discard the nonCommitted data for session_id, because session_id indicated to cancel the batch
      */
-    public void rollback(String session_id) {
-        nonCommittedPrices.remove(session_id);
+    public void cancel(String session_id) {
+        sessionLatestPrices.remove(session_id);
     }
 
-    public Optional<BigDecimal> getPrice(String instrumentId){
-        return Optional.ofNullable(committedPrices.getOrDefault(instrumentId, Pair.of(null, null)).getRight());
+    public Optional<BigDecimal> getPrice(String instrumentId) {
+        return Optional.ofNullable(latestPrices.getOrDefault(instrumentId, AsOfPrice.EMPTY).getPrice());
     }
 
 }

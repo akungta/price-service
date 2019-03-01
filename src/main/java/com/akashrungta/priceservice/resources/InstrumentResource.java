@@ -13,26 +13,27 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 @Api
-@Path("/consumer")
+@Path("/instrument/{instrument_id}")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class ConsumerResource {
+public class InstrumentResource {
 
     private final RecordsManager recordsManager;
 
-    public ConsumerResource(RecordsManager recordsManager) {
+    public InstrumentResource(RecordsManager recordsManager) {
         this.recordsManager = recordsManager;
     }
 
     @POST
     @Timed
-    @Path("/{instrument_id}")
-    public Response lastestPrice(@PathParam("instrument_id") @Valid String instrumentId) {
+    @Path("/latestPrice")
+    public Response latestPrice(@PathParam("instrument_id") @Valid String instrumentId) {
         Optional<BigDecimal> price = recordsManager.getPrice(instrumentId);
         if(price.isPresent()){
             return Response.ok().entity(new LatestPrice(instrumentId, price.get())).build();
         }
         return Response.status(Response.Status.BAD_REQUEST).entity("No price found.").build();
     }
+
 
 }

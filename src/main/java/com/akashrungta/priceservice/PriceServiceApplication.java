@@ -1,8 +1,8 @@
 package com.akashrungta.priceservice;
 
 import com.akashrungta.priceservice.core.RecordsManager;
-import com.akashrungta.priceservice.resources.ConsumerResource;
-import com.akashrungta.priceservice.resources.ProviderResource;
+import com.akashrungta.priceservice.resources.InstrumentResource;
+import com.akashrungta.priceservice.resources.SessionResource;
 import com.codahale.metrics.health.HealthCheck;
 import io.dropwizard.Application;
 import io.dropwizard.setup.Bootstrap;
@@ -34,10 +34,11 @@ public class PriceServiceApplication extends Application<PriceServiceConfigurati
     @Override
     public void run(final PriceServiceConfiguration configuration,
                     final Environment environment) {
-        final ProviderResource providerResource = new ProviderResource(RecordsManager.getInstance());
-        final ConsumerResource consumerResource = new ConsumerResource(RecordsManager.getInstance());
-        environment.jersey().register(providerResource);
-        environment.jersey().register(consumerResource);
+
+        final InstrumentResource instrumentResource = new InstrumentResource(RecordsManager.getInstance());
+        final SessionResource sessionResource = new SessionResource(RecordsManager.getInstance());
+        environment.jersey().register(instrumentResource);
+        environment.jersey().register(sessionResource);
         environment.healthChecks().register("healthcheck", new HealthCheck() {
             @Override
             protected Result check() throws Exception {
