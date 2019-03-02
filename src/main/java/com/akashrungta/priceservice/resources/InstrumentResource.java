@@ -20,7 +20,7 @@ public class InstrumentResource {
 
     private final RecordsManager recordsManager = RecordsManager.getInstance();
 
-    @POST
+    @GET
     @Timed
     @Path("/latestPrice")
     public Response latestPrice(@PathParam("instrument_id") @Valid String instrumentId) {
