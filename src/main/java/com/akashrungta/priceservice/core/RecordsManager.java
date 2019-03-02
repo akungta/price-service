@@ -60,7 +60,7 @@ public class RecordsManager {
     public void add(SessionInstrumentAsOf record){
         sessionLatestPrices.computeIfPresent(record.getSessionId(),
                 (sessionId, existingMap) -> {
-                    existingMap.merge(record.getSessionId(), record.getAsOfPrice(), latestAsOfPriceFunction());
+                    existingMap.merge(record.getInstrumentId(), record.getAsOfPrice(), latestAsOfPriceFunction());
                     return existingMap;
                 });
     }

@@ -4,11 +4,7 @@ import com.akashrungta.priceservice.models.SessionInstrumentAsOf;
 
 public class RecordsConsumer implements Runnable {
 
-    private final RecordsManager recordsManager;
-
-    public RecordsConsumer(RecordsManager recordsManager) {
-        this.recordsManager = recordsManager;
-    }
+    private final RecordsManager recordsManager = RecordsManager.getInstance();
 
     @Override
     public void run() {

@@ -11,7 +11,7 @@ public class JobExecutionService implements Managed {
 
     @Override
     public void start() throws Exception {
-        executor.execute(new RecordsConsumer(RecordsManager.getInstance()));
+        executor.execute(new RecordsConsumer());
     }
 
     @Override

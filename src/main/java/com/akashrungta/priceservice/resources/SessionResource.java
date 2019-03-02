@@ -37,18 +37,18 @@ public class SessionResource {
     @Timed
     @Path("/start")
     public Response start(@PathParam("session_id") @Valid String sessionId) {
-        sessionStatus.merge(sessionId, Status.START, (oldStatus, newStatus) -> {
-            if(oldStatus == Status.START){
-                throw new WebApplicationException("Already Started for " + sessionId, Response.Status.BAD_REQUEST);
-            } else {
-                try {
-                    recordsManager.queue.put(new SessionInstrumentAsOf(sessionId, Status.START));
-                } catch (InterruptedException e) {
-                    throw new WebApplicationException("Failed to start session " + sessionId, Response.Status.INTERNAL_SERVER_ERROR);
+        try {
+            recordsManager.queue.put(new SessionInstrumentAsOf(sessionId, Status.START));
+        } catch (InterruptedException e) {
+            throw new WebApplicationException("Failed to start session " + sessionId, Response.Status.INTERNAL_SERVER_ERROR);
+        } finally {
+            sessionStatus.merge(sessionId, Status.START, (oldStatus, newStatus) -> {
+                if(oldStatus == Status.START){
+                    throw new WebApplicationException("Already Started for " + sessionId, Response.Status.BAD_REQUEST);
                 }
                 return newStatus;
-            }
-        });
+            });
+        }
         return Response.ok().build();
     }
 
